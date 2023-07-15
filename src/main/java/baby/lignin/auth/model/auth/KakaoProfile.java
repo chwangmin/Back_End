@@ -10,7 +10,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class KakaoProfile {
-    public String nickname;
-    public String profile_image;
-    public String thumbnail_image;
+    private String nickname;
+    private String thumbnailImageUrl;
+    private String profileImageUrl;
 }

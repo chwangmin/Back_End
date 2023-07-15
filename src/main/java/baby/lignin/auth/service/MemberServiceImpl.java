@@ -1,9 +1,18 @@
 package baby.lignin.auth.service;
 
+import baby.lignin.auth.entity.MemberEntity;
 import baby.lignin.auth.model.Token;
+import baby.lignin.auth.model.auth.KakaoTokenResponse;
+import baby.lignin.auth.model.auth.KakaoUserInfoResponse;
+import baby.lignin.auth.repository.MemberRepository;
+import baby.lignin.auth.util.TokenGenerator;
+import baby.lignin.auth.util.converter.MemberConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 
 import java.io.BufferedReader;
@@ -24,67 +33,37 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 public class MemberServiceImpl implements MemberService {
 
+
+    private final MemberRepository memberRepository;
+    private final TokenGenerator tokenGenerator;
+    private final String kakaoAuthUri = "https://kauth.kakao.com";
+    private final String kakaoUri = "https://kapi.kakao.com";
+
     @Value("${spring.auth.kakao.client_id}")
     String client_id;
 
     @Value("${spring.auth.kakao.redirect_uri}")
     String redirect_uri;
     @Override
-    public Token getAccessToken(String access_code) {
+    public Token getToken(String access_code) {
+        KakaoTokenResponse kakaoTokenResponse = getKakaoTokenResponse(access_code);
+        KakaoUserInfoResponse kakaoUserInfoResponse = getKakaoUserInfoResponse(kakaoTokenResponse.getAccessToken());
+        System.out.println(kakaoUserInfoResponse.getKakaoAccount().getProfile().getNickname());
 
+        //Id 중복 제거
+        MemberEntity existMemberEntity = memberRepository.findByCertificationId(kakaoUserInfoResponse.getId()).orElse(null);
 
-        String access_Token = "";
-        String refresh_Token = "";
-        String reqURL = "https://kauth.kakao.com/oauth/token";
-        try {
-            URL url = new URL(reqURL);
-
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            // POST 요청을 위해 기본값이 false인 setDoOutput을 true로
-
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            // POST 요청에 필요로 요구하는 파라미터 스트림을 통해 전송
-
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
-            StringBuilder sb = new StringBuilder();
-            sb.append("grant_type=authorization_code");
-
-            sb.append("&client_id=").append(client_id); // REST_API키 본인이 발급받은 key 넣어주기
-            sb.append("&redirect_uri=").append(redirect_uri); // REDIRECT_URI 본인이 설정한 주소 넣어주기
-
-            sb.append("&code=").append(access_code);
-            bw.write(sb.toString());
-            bw.flush();
-
-            // 결과 코드가 200이라면 성공
-            int responseCode = conn.getResponseCode();
-
-            // 요청을 통해 얻은 JSON타입의 Response 메세지 읽어오기
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String line = "";
-            String result = "";
-
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-
-            // jackson objectmapper 객체 생성
-            ObjectMapper objectMapper = new ObjectMapper();
-            // JSON String -> Map
-            Map<String, Object> jsonMap = objectMapper.readValue(result, new TypeReference<Map<String, Object>>() {
-            });
-
-            access_Token = jsonMap.get("access_token").toString();
-            refresh_Token = jsonMap.get("refresh_token").toString();
-
-
-            br.close();
-            bw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if(existMemberEntity != null){
+            Long memberId = existMemberEntity.getId();
+            //tokenStorage.storeRefreshToken(token.getRefreshToken(), memberId);
+            return tokenGenerator.generateToken(memberId);
         }
-        return new Token(access_Token,refresh_Token);
+
+        MemberEntity memberEntity = memberRepository.save(MemberConverter.to(kakaoUserInfoResponse));
+        System.out.println(memberEntity.getId());
+        Long memberId = memberEntity.getId();
+
+        return tokenGenerator.generateToken(memberId);
     }
 
     @Override
@@ -200,5 +179,46 @@ public class MemberServiceImpl implements MemberService {
             e.printStackTrace();
         }
     }
+
+    //TODO : 여기 작성
+    @Override
+    public KakaoTokenResponse getKakaoTokenResponse(String code) {
+        WebClient webClient = WebClient.builder()
+                .baseUrl(kakaoAuthUri)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .build();
+        return webClient.post()
+                .uri(uriBuilder -> uriBuilder.path("/oauth/token")
+                        .queryParam("grant_type", "authorization_code")
+                        .queryParam("client_id", client_id)
+                        .queryParam("code", code)
+                        .queryParam("redirect_uri", redirect_uri)
+                        .build())
+                .retrieve()
+                .bodyToMono(KakaoTokenResponse.class)
+                .block();
+    }
+
+    @Override
+    public KakaoUserInfoResponse getKakaoUserInfoResponse(String access_token) {
+        WebClient webClient;
+        webClient = WebClient.builder()
+                .baseUrl(kakaoUri)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .build();
+
+
+        KakaoUserInfoResponse kakaoUserInfoResponse = webClient.post()
+                .uri(uriBuilder -> uriBuilder.path("/v2/user/me")
+                        .build())
+                .header("Authorization", "Bearer " + access_token)
+                .retrieve()
+                .bodyToMono(KakaoUserInfoResponse.class)
+                .block();
+
+        System.out.println(kakaoUserInfoResponse.getKakaoAccount().getProfile());
+        return kakaoUserInfoResponse;
+    }
+
 
 }

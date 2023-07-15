@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class KakaoAccount {
-    private String name;
     private String email;
-    private KakaoProfile kakaoProfile;
+    private KakaoProfile profile;
+    private String name;
 }
