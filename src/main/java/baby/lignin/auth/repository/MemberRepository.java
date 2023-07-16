@@ -7,6 +7,6 @@ import java.util.*;
 
 public interface MemberRepository extends JpaRepository<MemberEntity, Long> {
 
-    Optional<MemberEntity> findByCertificationId(Long memberId);
+    Optional<MemberEntity> findByCertificationIdAndDeletedFalse(Long certificationId);
 
 }

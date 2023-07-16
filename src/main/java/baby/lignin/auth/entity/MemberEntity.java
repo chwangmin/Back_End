@@ -30,8 +30,12 @@ public class MemberEntity {
     @Column
     private String email;
 
-    @Column
+    @Column(nullable = false)
     private Long certificationId;
+
+    @Column(nullable = false)
+    private boolean deleted;
+
 
 
     public void setId(Long id) {
