@@ -14,6 +14,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 
@@ -44,17 +47,17 @@ public class MemberServiceImpl implements MemberService {
 
     @Value("${spring.auth.kakao.redirect_uri}")
     String redirect_uri;
+
+    @Value("${spring.auth.kakao.admin_key}")
+    String admin_key;
+
     @Override
     public Token getToken(String access_code) {
         KakaoTokenResponse kakaoTokenResponse = getKakaoTokenResponse(access_code);
         KakaoUserInfoResponse kakaoUserInfoResponse = getKakaoUserInfoResponse(kakaoTokenResponse.getAccessToken());
-        System.out.println(kakaoUserInfoResponse.getKakaoAccount().getProfile().getNickname());
-
         //Id 중복 제거
-        MemberEntity existMemberEntity = memberRepository.findByCertificationId(kakaoUserInfoResponse.getId()).orElse(null);
-
         MemberEntity existMemberEntity = memberRepository.findByCertificationIdAndDeletedFalse(kakaoUserInfoResponse.getId()).orElse(null);
-        if(existMemberEntity != null){
+        if (existMemberEntity != null) {
             Long memberId = existMemberEntity.getId();
             //tokenStorage.storeRefreshToken(token.getRefreshToken(), memberId);
             return tokenGenerator.generateToken(memberId);
@@ -71,66 +74,68 @@ public class MemberServiceImpl implements MemberService {
     public MemberResponse getUserInfo(String token) throws Exception {
         Optional<Long> memberIdRe = tokenResolver.resolveToken(token);
 
-        if(memberIdRe.isPresent()){
+        if (memberIdRe.isPresent()) {
             Long memberId = memberIdRe.get();
             MemberEntity memberEntity = memberRepository.findById(memberId)
-                            .orElseThrow(()->new Exception("찾는 멤버가 없습니다.!"));
+                    .orElseThrow(() -> new Exception("찾는 멤버가 없습니다.!"));
             return MemberConverter.from(memberEntity);
 
         }
         return null;
+
     }
 
     @Override
     public void unlink(String access_Token) {
-        String reqURL = "https://kapi.kakao.com/v1/user/unlink";
-        try {
-            URL url = new URL(reqURL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Authorization", "Bearer " + access_Token);
 
-            int responseCode = conn.getResponseCode();
-            System.out.println("responseCode : " + responseCode);
+        Optional<Long> memberIdRe = tokenResolver.resolveToken(access_Token);
+        Long memberId = memberIdRe.get();
+        MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        WebClient webClient = WebClient.builder()
+                .baseUrl(kakaoUri)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + admin_key)
+                .build();
 
-            String result = "";
-            String line = "";
+        MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+        requestBody.add("target_id_type", "user_id");
+        requestBody.add("target_id", String.valueOf(memberEntity.getCertificationId()));
+        webClient.post()
+                .uri(uriBuilder -> uriBuilder.path("/v1/user/unlink")
+                        .build())
+                .body(BodyInserters.fromFormData(requestBody))
+                .retrieve()
+                .toBodilessEntity()
+                .block();
 
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-            System.out.println(result);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        memberRepository.delete(memberEntity);
+
     }
 
     @Override
     public void logout(String access_Token) {
-        String reqURL = "https://kapi.kakao.com/v1/user/logout";
-        try {
-            URL url = new URL(reqURL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Authorization", "Bearer " + access_Token);
+        Optional<Long> memberIdRe = tokenResolver.resolveToken(access_Token);
+        Long memberId = memberIdRe.get();
+        MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
 
-            int responseCode = conn.getResponseCode();
-            System.out.println("responseCode : " + responseCode);
+        WebClient webClient = WebClient.builder()
+                .baseUrl(kakaoUri)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + admin_key)
+                .build();
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+        requestBody.add("target_id_type", "user_id");
+        requestBody.add("target_id", String.valueOf(memberEntity.getCertificationId()));
+        webClient.post()
+                .uri(uriBuilder -> uriBuilder.path("/v1/user/logout")
+                        .build())
+                .body(BodyInserters.fromFormData(requestBody))
+                .retrieve()
+                .toBodilessEntity()
+                .block();
 
-            String result = "";
-            String line = "";
-
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-            System.out.println(result);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     //TODO : 여기 작성
@@ -169,7 +174,6 @@ public class MemberServiceImpl implements MemberService {
                 .bodyToMono(KakaoUserInfoResponse.class)
                 .block();
 
-        System.out.println(kakaoUserInfoResponse.getKakaoAccount().getProfile());
         return kakaoUserInfoResponse;
     }
 

@@ -15,9 +15,9 @@ public interface MemberService {
     public MemberResponse getUserInfo(String token) throws Exception;
 
 
-    public MemberResponse unlink(String access_Token);
+    public void unlink(String access_Token);
 
-    public MemberResponse logout(String access_Token);
+    public void logout(String access_Token);
 
     public KakaoTokenResponse getKakaoTokenResponse(String code);
 
