@@ -44,3 +44,8 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// gradle을 사용할 경우 build.gradle에 추가
+tasks.named("jar") {
+	enabled = false
+}
