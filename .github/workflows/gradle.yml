@@ -61,5 +61,5 @@ jobs:
           script_stop: true # Stop the script if any command fails.
           script_timeout: 60 # Timeout after 60 seconds.
           script: |
-              cd docker # Change this to the path of your docker directory.
-              docker-compose up --build -d # Build and deploy the docker-compose.yml file.
+              cd docker
+              docker-compose up --build -d
