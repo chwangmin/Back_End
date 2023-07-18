@@ -29,7 +29,6 @@ public class MemberController {
     private final MemberService memberService;
     private final HttpSession session;
     @Operation(summary = "kakao 로그인 요청", description = "로그인 요청")
-    @Parameter(name = "request", description = "카카오 인증 서버로부터 발급된 인가 코드")
     @RequestMapping(value = "/login", method = RequestMethod.GET)
     public ApiResponse<ApiResponse.SuccessBody<Token>> kakaoLogin(@RequestParam(value = "code", required = false) String code) {
         Token tk = memberService.getToken(code);
@@ -39,15 +38,16 @@ public class MemberController {
 
     @Operation(summary = "사용자 유저 정보")
     @GetMapping(value = "/info")
-    public ApiResponse<ApiResponse.SuccessBody<MemberResponse>> getUserInfo(@RequestParam(value = "token",required = true) String token) throws Exception {
+    public ApiResponse<ApiResponse.SuccessBody<MemberResponse>> getUserInfo(@RequestHeader("Authorization") String token) throws Exception {
         return ApiResponseGenerator.success(memberService.getUserInfo(token),HttpStatus.OK, MessageCode.SUCCESS);
     }
 
 
     @Operation(summary = "로그아웃")
     @RequestMapping(value="/logout", method= RequestMethod.GET)
-    public ApiResponse<ApiResponse.SuccessBody<Void>> logout(@RequestParam(value = "token",required = true) String token) {
+    public ApiResponse<ApiResponse.SuccessBody<Void>> logout(@RequestHeader("Authorization") String token) {
         memberService.logout(token);
+        System.out.println("왜 실패지? " + MessageCode.SUCCESS);
         return ApiResponseGenerator.success(HttpStatus.OK, MessageCode.SUCCESS);
     }
 
@@ -55,7 +55,7 @@ public class MemberController {
 
     @Operation(summary = "사용자 탈퇴")
     @RequestMapping(value="/unlink", method= RequestMethod.GET)
-    public ApiResponse<ApiResponse.SuccessBody<Void>> access(@RequestParam(value = "token",required = true) String token) {
+    public ApiResponse<ApiResponse.SuccessBody<Void>> access(@RequestHeader("Authorization") String token) {
         memberService.unlink(token);
         return ApiResponseGenerator.success(HttpStatus.OK, MessageCode.RESOURCE_DELETED);
     }
