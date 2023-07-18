@@ -55,11 +55,11 @@ jobs:
       - name: redis deploy
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.HOST }}
+          host: ${{ secrets.HOST_DEV }}
           username: ubuntu
-          key: ${{ secrets.PRIVATE_KEY }}
+          key: ${{ secrets.PRIVATE_KEY_DEV }}
           script_stop: true # Stop the script if any command fails.
           script_timeout: 60 # Timeout after 60 seconds.
           script: |
-              cd docker
+              cd /path/to/Lignin-Be/docker
               docker-compose up --build -d
