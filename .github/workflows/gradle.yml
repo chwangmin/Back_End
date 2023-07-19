@@ -50,4 +50,4 @@ jobs:
             docker stop server
             docker pull chwangmin/spring-cicd:${GITHUB_SHA::7}
             docker tag chwangmin/spring-cicd:${GITHUB_SHA::7} spring-cicd
-            docker run -d --rm --name server -p 80:8080 spring-cicd
+            docker run --name server -p 80:8080 spring-cicd
