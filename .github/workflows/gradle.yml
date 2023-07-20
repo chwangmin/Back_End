@@ -42,6 +42,7 @@ jobs:
           host: ${{ secrets.HOST_DEV }}
           key: ${{ secrets.PRIVATE_KEY_DEV }}
           port: 22
+          proxy_port : 22
           source: "./.docker/docker-compose.yml"
           target: "/home/ubuntu"
 
@@ -53,6 +54,7 @@ jobs:
           host: ${{ secrets.HOST_DEV }}
           key: ${{ secrets.PRIVATE_KEY_DEV }}
           port: 22
+          proxy_port : 22
           source: "./script/deploy.sh"
           target: "/home/ubuntu"
 
