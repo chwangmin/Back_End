@@ -19,12 +19,12 @@ services:
 
   green:
     container_name: green
-    image: chwangmin/spring-cicd
+    image: spring-cicd
     ports:
       - "8080:8080"
 
   blue:
     container_name: blue
-    image: chwangmin/spring-cicd
+    image: spring-cicd
     ports:
       - "8081:8080"
