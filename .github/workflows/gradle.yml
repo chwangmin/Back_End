@@ -27,7 +27,6 @@ jobs:
           application_yml_dir : src/main/resources
           application_yml_FILE_NAME : application.yml
         run: |
-          mkdir src/main/resources
           echo $application_yml | base64 --decode > $application_yml_dir/$application_yml_FILE_NAME
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
