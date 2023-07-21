@@ -42,9 +42,8 @@ jobs:
           host: ${{ secrets.HOST_DEV }}
           key: ${{ secrets.PRIVATE_KEY_DEV }}
           port: 22
-          proxy_port : 22
           source: "./.docker/docker-compose.yml"
-          target: "/home/ubuntu"
+          target: "/home/ubuntu/docker-compose.yml"
 
       # deploy.sh 파일 서버로 전달하기(복사 후 붙여넣기)
       - name: Send deploy.sh
@@ -54,9 +53,8 @@ jobs:
           host: ${{ secrets.HOST_DEV }}
           key: ${{ secrets.PRIVATE_KEY_DEV }}
           port: 22
-          proxy_port : 22
           source: "./script/deploy.sh"
-          target: "/home/ubuntu"
+          target: "/home/ubuntu/deploy.sh"
 
       - name: Docker build
         run: |
