@@ -72,6 +72,6 @@ jobs:
             docker stop server
             docker pull chwangmin/spring-cicd:${GITHUB_SHA::7}
             docker tag chwangmin/spring-cicd:${GITHUB_SHA::7} spring-cicd
-            chmod 777 ./script/deploy.sh
-            ./script/deploy.sh
+            chmod 777 ./deploy.sh
+            ./deploy.sh
             docker image prune -f
